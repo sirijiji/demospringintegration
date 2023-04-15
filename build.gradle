@@ -1,0 +1,94 @@
+import java.util.regex.Pattern
+
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.0.5'
+	id 'io.spring.dependency-management' version '1.1.0'
+}
+
+group = 'com.exaxxionsiri'
+version = '0.0.2-SNAPSHOT'
+sourceCompatibility = '17'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-batch'
+	implementation 'org.springframework.batch:spring-batch-infrastructure'
+	implementation 'org.springframework.batch:spring-batch-integration'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-integration'
+	implementation 'org.springframework.integration:spring-integration-core:6.0.4'
+	implementation 'org.springframework.integration:spring-integration-file:6.0.4'
+	implementation 'org.springframework.integration:spring-integration-jpa'
+	runtimeOnly 'com.h2database:h2'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.batch:spring-batch-test'
+	testImplementation 'org.springframework.integration:spring-integration-test'
+
+	compileOnly 'org.projectlombok:lombok:1.18.26'
+	annotationProcessor 'org.projectlombok:lombok:1.18.26'
+
+	testCompileOnly 'org.projectlombok:lombok:1.18.26'
+	testAnnotationProcessor 'org.projectlombok:lombok:1.18.26'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+task upgradeVersion {
+
+	def versionNumber = project.hasProperty('newVersion') ? project.newVersion : null // get the version number from the command line argument
+	if (versionNumber == null) {
+		throw new GradleException("New version number is not provided")
+	}
+
+	doLast {
+		def buildFile = file('build.gradle')
+		def pattern = Pattern.compile(/version\s*=\s*'(\d+\.\d+\.\d+-SNAPSHOT)'/) // define the version pattern here
+		def matcher = pattern.matcher(buildFile.text)
+		matcher.find()
+		def currentVersion = matcher.group(1)
+		newVersion = newVersion.replaceAll(/\d+$/, versionNumber.split("\\.").last())
+		def newContent = buildFile.text.replaceAll(pattern, "version = '$newVersion'")
+		buildFile.write(newContent)
+		println "Upgraded version from ${currentVersion} to ${newVersion}"
+	}
+}
+
+task createReleaseBranch(type: Exec) {
+
+	// Get the new version number from a command-line argument
+	def versionNumber = project.hasProperty('newVersion') ? project.newVersion : null // get the version number from the command line argument
+	if (versionNumber == null) {
+		throw new GradleException("New version number is not provided")
+	}
+
+	// Get the current date in YYYY-MM-DD format
+	def currentDateBranch = new Date().format('dd_MM_yyyy')
+	// Build the branch name using the current date and new version number
+	def branchName = "release/${currentDateBranch}/${newVersion}"
+
+	// Call Git to create the new branch
+	commandLine 'git', 'checkout', '-b', branchName
+
+//	//add current date to test.ts
+//	def testFile = file('src/main/webapp/test.ts')
+//	def pattern = Pattern.compile(/version\s*=\s*'(\d+\.\d+\.\d+-SNAPSHOT)'/) // define the version pattern here
+//	def matcher = pattern.matcher(testFile.text)
+//	matcher.find()
+//	def currentVersion = matcher.group(1)
+//
+//	def currentDate = new Date().format('dd/MM/yyyy')
+//	def newContent = testFile.text.replaceAll(pattern, "version = '$currentVersion $currentDate'")
+//	testFile.write(newContent)
+//
+//	def commitMessage = "[RELEASE] '$currentVersion $currentDate' "
+//	commandLine 'git', 'commit', '-am', commitMessage
+
+
+
+}
